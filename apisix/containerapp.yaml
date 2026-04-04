@@ -32,13 +32,33 @@ properties:
         mountPath: /etcd-data
     - name: apisix
       image: apache/apisix:3.7.0-debian
+      command:
+      - /bin/sh
+      - -c
+      args:
+      - |
+        set -eu
+        cat > /usr/local/apisix/conf/config.yaml <<'EOF'
+        deployment:
+          role: traditional
+          role_traditional:
+            config_provider: etcd
+          admin:
+            admin_key_required: true
+            admin_key:
+              - name: admin
+                key: "__APISIX_ADMIN_KEY__"
+                role: admin
+            allow_admin:
+              - 0.0.0.0/0
+          etcd:
+            host:
+              - "http://127.0.0.1:2379"
+        EOF
+        exec /docker-entrypoint.sh docker-start
       env:
-      - name: APISIX_DEPLOYMENT_ETCD_HOST
-        value: '["http://127.0.0.1:2379"]'
       - name: APISIX_STAND_ALONE
         value: "false"
-      - name: APISIX_DEPLOYMENT_ADMIN_ALLOW_ADMIN
-        value: '["0.0.0.0/0"]'
       resources:
         cpu: 0.5
         memory: 1Gi
@@ -53,30 +73,56 @@ properties:
         APISIX_KEY="__APISIX_ADMIN_KEY__"
         HELLO_HOST="__HELLO_API_HOST__"
 
-        until curl -sS -m 3 -H "X-API-KEY: ${APISIX_KEY}" http://127.0.0.1:9180/apisix/admin/routes >/dev/null 2>&1; do
-          echo "route-loader: waiting for APISIX admin..."
-          sleep 2
-        done
+        wait_admin() {
+          while true; do
+            CODE=$(curl -sS -m 3 -o /dev/null -w "%{http_code}" \
+              -H "X-API-KEY: ${APISIX_KEY}" \
+              http://127.0.0.1:9180/apisix/admin/routes || true)
+            case "$CODE" in
+              200)
+                echo "route-loader: APISIX admin is ready"
+                return 0
+                ;;
+              401|403)
+                echo "route-loader: ERROR invalid APISIX admin key (HTTP ${CODE})"
+                return 1
+                ;;
+              *)
+                echo "route-loader: waiting for APISIX admin (HTTP ${CODE})..."
+                sleep 2
+                ;;
+            esac
+          done
+        }
 
-        echo "route-loader: registering /hello"
-        curl -sS -X PUT http://127.0.0.1:9180/apisix/admin/routes/hello-root \
-          -H "X-API-KEY: ${APISIX_KEY}" -H "Content-Type: application/json" \
-          -d "{\"uri\":\"/hello\",\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/hello\"}}}"
+        put_route() {
+          route_id="$1"
+          payload="$2"
+          RESP=$(curl -sS -X PUT "http://127.0.0.1:9180/apisix/admin/routes/${route_id}" \
+            -H "X-API-KEY: ${APISIX_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            -w "\n%{http_code}")
+          CODE=$(printf '%s\n' "$RESP" | tail -n 1)
+          BODY=$(printf '%s\n' "$RESP" | sed '$d')
+          case "$CODE" in
+            200|201)
+              echo "route-loader: registered ${route_id} (HTTP ${CODE})"
+              ;;
+            *)
+              echo "route-loader: ERROR registering ${route_id} (HTTP ${CODE})"
+              echo "$BODY"
+              return 1
+              ;;
+          esac
+        }
 
-        echo "route-loader: registering /hello/*"
-        curl -sS -X PUT http://127.0.0.1:9180/apisix/admin/routes/hello-wildcard \
-          -H "X-API-KEY: ${APISIX_KEY}" -H "Content-Type: application/json" \
-          -d "{\"uri\":\"/hello/*\",\"methods\":[\"GET\"],\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"regex_uri\":[\"^/hello/(.*)\",\"/api/hello/\$1\"]}}}"
+        wait_admin
 
-        echo "route-loader: registering /status"
-        curl -sS -X PUT http://127.0.0.1:9180/apisix/admin/routes/status \
-          -H "X-API-KEY: ${APISIX_KEY}" -H "Content-Type: application/json" \
-          -d "{\"uri\":\"/status\",\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/status\"}}}"
-
-        echo "route-loader: registering /auth/login"
-        curl -sS -X PUT http://127.0.0.1:9180/apisix/admin/routes/auth-login \
-          -H "X-API-KEY: ${APISIX_KEY}" -H "Content-Type: application/json" \
-          -d "{\"uri\":\"/auth/login\",\"methods\":[\"POST\"],\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/auth/login\"}}}"
+        put_route "hello-root" "{\"uri\":\"/hello\",\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/hello\"}}}"
+        put_route "hello-wildcard" "{\"uri\":\"/hello/*\",\"methods\":[\"GET\"],\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"regex_uri\":[\"^/hello/(.*)\",\"/api/hello/\$1\"]}}}"
+        put_route "status" "{\"uri\":\"/status\",\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/status\"}}}"
+        put_route "auth-login" "{\"uri\":\"/auth/login\",\"methods\":[\"POST\"],\"upstream\":{\"type\":\"roundrobin\",\"scheme\":\"https\",\"pass_host\":\"node\",\"nodes\":{\"${HELLO_HOST}:443\":1}},\"plugins\":{\"proxy-rewrite\":{\"uri\":\"/api/auth/login\"}}}"
 
         echo "route-loader: done"
         tail -f /dev/null

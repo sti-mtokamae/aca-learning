@@ -74,7 +74,7 @@ sed \
   -e "s|__APISIX_ADMIN_KEY__|$APISIX_ADMIN_KEY_ESCAPED|g" \
   "$TEMPLATE_PATH" > "$RESOLVED_PATH"
 
-echo "4) Deploy/update APISIX gateway (co-located etcd + apisix + route-loader)"
+echo "4) Deploy/update APISIX gateway (co-located etcd + apisix)"
 if az containerapp show --name "$GATEWAY_APP" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
   az containerapp update \
     --name "$GATEWAY_APP" \
@@ -111,3 +111,4 @@ echo "Revision: $LATEST_REV"
 echo "Gateway URL: https://$GATEWAY_URL"
 echo "Upstream hello-api host: $HELLO_API_FQDN"
 echo "Template: $TEMPLATE_PATH"
+echo "Next: run ./register-routes.sh to apply routes"

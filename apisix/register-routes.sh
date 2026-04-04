@@ -46,7 +46,8 @@ echo -n "Registering /hello... "
 az containerapp exec \
   -g "$RESOURCE_GROUP" \
   -n "$GATEWAY_APP" \
-  --command "/bin/sh -c 'curl -s -X PUT http://localhost:9180/apisix/admin/routes/hello-root -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/hello\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/hello\\\"}}}\" > /dev/null && echo OK'" \
+  --container route-loader \
+  --command "/bin/sh -c 'curl -fsS -o /dev/null -X PUT http://localhost:9180/apisix/admin/routes/hello-root -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/hello\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/hello\\\"}}}\" && echo OK'" \
   2>&1 | grep -E "^(OK|✓)" || echo "WARN: Registration may have failed, but continuing..."
 
 # Register /hello/* route
@@ -54,7 +55,8 @@ echo -n "Registering /hello/*... "
 az containerapp exec \
   -g "$RESOURCE_GROUP" \
   -n "$GATEWAY_APP" \
-  --command "/bin/sh -c 'curl -s -X PUT http://localhost:9180/apisix/admin/routes/hello-wildcard -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/hello/*\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"regex_uri\\\": [\\\"^/hello/(.*)\\\", \\\"/api/\\\$1\\\"]}}}\" > /dev/null && echo OK'" \
+  --container route-loader \
+  --command "/bin/sh -c 'curl -fsS -o /dev/null -X PUT http://localhost:9180/apisix/admin/routes/hello-wildcard -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/hello/*\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"regex_uri\\\": [\\\"^/hello/(.*)\\\", \\\"/api/\\\$1\\\"]}}}\" && echo OK'" \
   2>&1 | grep -E "^(OK|✓)" || echo "WARN"
 
 # Register /status route
@@ -62,7 +64,8 @@ echo -n "Registering /status... "
 az containerapp exec \
   -g "$RESOURCE_GROUP" \
   -n "$GATEWAY_APP" \
-  --command "/bin/sh -c 'curl -s -X PUT http://localhost:9180/apisix/admin/routes/status -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/status\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/status\\\"}}}\" > /dev/null && echo OK'" \
+  --container route-loader \
+  --command "/bin/sh -c 'curl -fsS -o /dev/null -X PUT http://localhost:9180/apisix/admin/routes/status -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/status\\\", \\\"methods\\\": [\\\"GET\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/status\\\"}}}\" && echo OK'" \
   2>&1 | grep -E "^(OK|✓)" || echo "WARN"
 
 # Register /auth/login route
@@ -70,7 +73,8 @@ echo -n "Registering /auth/login... "
 az containerapp exec \
   -g "$RESOURCE_GROUP" \
   -n "$GATEWAY_APP" \
-  --command "/bin/sh -c 'curl -s -X PUT http://localhost:9180/apisix/admin/routes/auth-login -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/auth/login\\\", \\\"methods\\\": [\\\"POST\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/auth/login\\\"}}}\" > /dev/null && echo OK'" \
+  --container route-loader \
+  --command "/bin/sh -c 'curl -fsS -o /dev/null -X PUT http://localhost:9180/apisix/admin/routes/auth-login -H \"X-API-Key: ${API_KEY}\" -H \"Content-Type: application/json\" -d \"{\\\"uri\\\": \\\"/auth/login\\\", \\\"methods\\\": [\\\"POST\\\"], \\\"upstream\\\": {\\\"type\\\": \\\"roundrobin\\\", \\\"scheme\\\": \\\"https\\\", \\\"nodes\\\": {\\\"${HELLO_API_FQDN}:443\\\": 1}}, \\\"plugins\\\": {\\\"proxy-rewrite\\\": {\\\"uri\\\": \\\"/api/auth/login\\\"}}}\" && echo OK'" \
   2>&1 | grep -E "^(OK|✓)" || echo "WARN"
 
 echo ""
