@@ -230,11 +230,12 @@ az containerapp exec \
   --name "$GATEWAY_APP" \
   --resource-group "$RESOURCE_GROUP" \
   --container route-loader \
-  --command "/bin/sh -c 'curl -sS -H \"X-API-KEY: $APISIX_ADMIN_KEY\" http://127.0.0.1:9180/apisix/admin/routes'"
+  --command "curl -sS -H X-API-KEY:$APISIX_ADMIN_KEY http://127.0.0.1:9180/apisix/admin/routes"
 
 # NOTE:
-# az containerapp exec は管理プレーン制限により 429 / ClusterExecFailure になる場合があります。
-# その場合は少し待って再試行し、データプレーン確認（make smoke）を優先してください。
+# make routes は exec のリトライと route-loader ログのフォールバック確認を実装済みです。
+# まれに管理プレーン都合で即時一覧取得できない場合でも、ルート登録完了ログを確認できます。
+# データプレーン疎通は make smoke を正として確認してください。
 ```
 
 ### hello-api が internal で外から見えない

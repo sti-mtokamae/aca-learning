@@ -22,7 +22,7 @@ make doctor
 # スモークテスト（JWT login -> /hello 200 -> 未認証 403）
 make smoke
 
-# APISIX ルート一覧確認（exec が 429 になる場合あり）
+# APISIX ルート一覧確認（リトライ + ログフォールバック付き）
 make routes
 
 # ルート再投入（必要時）
