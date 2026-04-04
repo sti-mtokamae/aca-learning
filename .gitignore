@@ -1,0 +1,25 @@
+# Maven
+target/
+*.jar
+*.jar.original
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+*~
+*.Zone.Identifier
+
+# Clojure
+.lsp/
+.clj-kondo/
+
+# Environment
+.env
+.env.*
+*.env.local
+!.env.example

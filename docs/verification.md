@@ -1,0 +1,258 @@
+# Verification Guide - Running Smoke Tests
+
+## Prerequisites
+
+### 1. .env ファイルの準備（必須）
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
+# 既存されていない場合
+if [ ! -f .env ]; then
+  echo "ERROR: .env file not found"
+  echo "Please create .env from .env.example and fill in actual values"
+  exit 1
+fi
+
+# 以降のコマンドで .env を読み込む
+set -a
+source ./.env
+set +a
+```
+
+### 2. 前提条件の確認
+
+```bash
+# 全コンテナアプリが Running 状態か確認
+az containerapp list \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "[].{name:name, state:properties.runningStatus}" \
+  -o table
+
+# Expected output:
+# Name            State
+# -----------------------
+# hello-api       Running
+# apisix-gateway  Running
+# (その他)
+```
+
+### 3. FQDN の確認
+
+```bash
+GATEWAY_FQDN=$(az containerapp show \
+  --name "$GATEWAY_APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+API_FQDN=$(az containerapp show \
+  --name "$HELLO_APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+echo "Gateway: https://$GATEWAY_FQDN"
+echo "API:     https://$API_FQDN"
+
+# Expected:
+# Gateway: FQDN で外部接続可能
+# API: .internal で内部 ONLY（外部からはアクセス不可）
+```
+
+## Smoke Tests
+
+### Test 1: JWT ログイン
+
+```bash
+GATEWAY="https://$GATEWAY_FQDN"
+
+echo "=== Test 1: /auth/login ==="
+LOGIN_RESPONSE=$(curl -fsS -X POST "$GATEWAY/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"$APP_SECURITY_USERNAME\",\"password\":\"$APP_SECURITY_PASSWORD\"}")
+
+TOKEN=$(echo "$LOGIN_RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+if [ -z "$TOKEN" ]; then
+  echo "FAIL: token extraction failed"
+  echo "Response: $LOGIN_RESPONSE"
+  exit 1
+fi
+
+echo "PASS: token acquired (${#TOKEN} chars)"
+```
+
+### Test 2: 保護エンドポイント `/hello`
+
+```bash
+echo "=== Test 2: GET /hello (with token) ==="
+RESPONSE=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$GATEWAY/hello")
+echo "$RESPONSE"
+
+# Expected: Clojure via Spring Boot response
+# Example: {"message":"Hello from ACA Learning via Clojure control!","timestamp":"...","service":"spring-clojure-hybrid-api","version":"1.0.0"}
+```
+
+### Test 3: ワイルドカードルート `/hello/{name}`
+
+```bash
+echo "=== Test 3: GET /hello/world (wildcard route) ==="
+RESPONSE=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$GATEWAY/hello/world")
+echo "$RESPONSE"
+
+# Expected: personalized response
+# Example: {"message":"Hello world from Clojure on Spring Boot!","timestamp":"...","service":"spring-clojure-hybrid-api"}
+```
+
+### Test 4: ステータスエンドポイント
+
+```bash
+echo "=== Test 4: GET /status ==="
+RESPONSE=$(curl -fsS -H "Authorization: Bearer $TOKEN" "$GATEWAY/status")
+echo "$RESPONSE"
+
+# Expected:
+# {"status":"UP","control":"clojure","base":"spring-boot","timestamp":"..."}
+```
+
+### Test 5: 認可チェック（トークンなし）
+
+```bash
+echo "=== Test 5: GET /hello without token (expect 403) ==="
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$GATEWAY/hello")
+
+if [ "$HTTP_CODE" = "403" ]; then
+  echo "PASS: HTTP 403 (unauthorized)"
+else
+  echo "FAIL: Expected 403, got $HTTP_CODE"
+  exit 1
+fi
+```
+
+## Automated Verification Scripts
+
+### Option A: Single Script
+
+すべてのテストを一度に実行:
+
+```bash
+set -a
+source ./.env
+set +a
+
+GATEWAY_FQDN=$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$GATEWAY_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+bash apisix/verify-jwt-via-gateway.sh \
+  GATEWAY_URL="https://$GATEWAY_FQDN"
+```
+
+or
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+GATEWAY_URL=$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$GATEWAY_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+./verify-jwt-direct.sh API_URL="https://$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$HELLO_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)"
+```
+
+### Option B: Prepare .env then run scripts
+
+```bash
+# リポジトリルート
+cd /home/mtok/dev.home/aca-learning
+
+# .env を読み込む環境で実行
+source ./.env
+
+# Gateway 検証
+GATEWAY_URL=$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$GATEWAY_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+GATEWAY_URL="https://$GATEWAY_URL" ./apisix/verify-jwt-via-gateway.sh
+
+# 直接 API 検証（内部アクセス限定のため、スクリプト内での az コマンド利用想定）
+API_URL=$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$HELLO_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+API_URL="https://$API_URL" ./verify-jwt-direct.sh
+```
+
+## Troubleshooting
+
+### Token で 401/403 が返る
+
+```bash
+# 1. credentials 確認
+echo "USERNAME: $APP_SECURITY_USERNAME"
+echo "PASSWORD: $APP_SECURITY_PASSWORD"
+echo "JWT_SECRET length: ${#APP_JWT_SECRET}"
+
+# 2. login エンドポイント直接テスト
+curl -v -X POST "https://$GATEWAY_FQDN/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"acauser","password":"changeme'}'
+
+# 3. APISIX ルート確認
+az containerapp exec \
+  --name "$GATEWAY_APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --command "/bin/sh -c 'curl -s http://127.0.0.1:9180/apisix/admin/routes -H \"X-API-KEY: $APISIX_ADMIN_KEY\"'"
+```
+
+### hello-api が internal で外から見えない
+
+これは想定動作です。以下で確認:
+
+```bash
+# 内部 FQDN
+API_FQDN=$(az containerapp show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$HELLO_APP" \
+  --query "properties.configuration.ingress.fqdn" -o tsv)
+
+echo "API FQDN: $API_FQDN"
+# Expected: *.internal.* (内部のみ)
+
+# 外部からアクセス試行（失敗することを確認）
+curl -v https://$API_FQDN/api/health 2>&1 | grep -E "Connection refused|Couldn't resolve|timed out" || echo "Unexpected: resolved from outside"
+```
+
+## Test Results Example
+
+```
+[1] Login /auth/login
+    => token 133 chars OK
+
+[2] GET /hello (with token)
+    => {"message":"Hello from ACA Learning via Clojure control!","timestamp":"2026-04-03T22:53:02.378065525","service":"spring-clojure-hybrid-api","version":"1.0.0"}
+
+[3] GET /hello/world (wildcard route)
+    => {"message":"Hello world from Clojure on Spring Boot!","timestamp":"2026-04-03T22:53:02.538689946","service":"spring-clojure-hybrid-api"}
+
+[4] GET /status
+    => {"status":"UP","control":"clojure","base":"spring-boot","timestamp":"2026-04-03T22:53:02.742576998"}
+
+[5] GET /hello without token (expect 401 or 403)
+    => HTTP 403
+    => unauthorized correctly rejected
+
+=== All smoke tests passed ===
+```
+
+## Next Steps
+
+- パフォーマンステスト: load test scripts
+- セキュリティ監査: Azure Security Center scan
+- スケール検証: 複数レプリカ時の動作
+- 本番化前チェックリスト: docs/split-scale-migration-playbook.md 参照
