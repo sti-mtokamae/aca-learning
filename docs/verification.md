@@ -135,6 +135,17 @@ fi
 すべてのテストを一度に実行:
 
 ```bash
+cd /home/mtok/dev.home/aca-learning
+
+# 推奨: Make ターゲット（内部で scripts/smoke.sh を実行）
+make smoke
+```
+
+or
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
 set -a
 source ./.env
 set +a
@@ -144,22 +155,25 @@ GATEWAY_FQDN=$(az containerapp show \
   --name "$GATEWAY_APP" \
   --query "properties.configuration.ingress.fqdn" -o tsv)
 
-bash apisix/verify-jwt-via-gateway.sh \
-  GATEWAY_URL="https://$GATEWAY_FQDN"
+GATEWAY_URL="https://$GATEWAY_FQDN" ./apisix/verify-jwt-via-gateway.sh
 ```
 
 or
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
+set -a
+source ./.env
+set +a
+
 GATEWAY_URL=$(az containerapp show \
   --resource-group "$RESOURCE_GROUP" \
   --name "$GATEWAY_APP" \
   --query "properties.configuration.ingress.fqdn" -o tsv)
-./verify-jwt-direct.sh API_URL="https://$(az containerapp show \
+API_URL="https://$(az containerapp show \
   --resource-group "$RESOURCE_GROUP" \
   --name "$HELLO_APP" \
-  --query "properties.configuration.ingress.fqdn" -o tsv)"
+  --query "properties.configuration.ingress.fqdn" -o tsv)" ./scripts/verify-jwt-direct.sh
 ```
 
 ### Option B: Prepare .env then run scripts
@@ -169,7 +183,9 @@ GATEWAY_URL=$(az containerapp show \
 cd /home/mtok/dev.home/aca-learning
 
 # .env を読み込む環境で実行
+set -a
 source ./.env
+set +a
 
 # Gateway 検証
 GATEWAY_URL=$(az containerapp show \
@@ -185,7 +201,7 @@ API_URL=$(az containerapp show \
   --name "$HELLO_APP" \
   --query "properties.configuration.ingress.fqdn" -o tsv)
 
-API_URL="https://$API_URL" ./verify-jwt-direct.sh
+API_URL="https://$API_URL" ./scripts/verify-jwt-direct.sh
 ```
 
 ## Troubleshooting
@@ -201,7 +217,7 @@ echo "JWT_SECRET length: ${#APP_JWT_SECRET}"
 # 2. login エンドポイント直接テスト
 curl -v -X POST "https://$GATEWAY_FQDN/auth/login" \
   -H "Content-Type: application/json" \
-  -d '{"username":"acauser","password":"changeme'}'
+  -d "{\"username\":\"$APP_SECURITY_USERNAME\",\"password\":\"$APP_SECURITY_PASSWORD\"}"
 
 # 3. APISIX ルート確認
 az containerapp exec \
