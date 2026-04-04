@@ -48,7 +48,13 @@ make vnet-poc
 cd /home/mtok/dev.home/aca-learning
 
 # .env + .env.vnet-checklist を合成したローカル実行用ファイルを作成
-cat .env .env.vnet-checklist > .env.vnet-runtime
+awk -F= '/^[A-Z0-9_]+=/ {print $0}' .env > .env.vnet-runtime
+awk -F= '/^[A-Z0-9_]+=/ {print $0}' .env.vnet-checklist >> .env.vnet-runtime
+
+NEW_ACA_ENV_NAME=$(awk -F= '/^NEW_ACA_ENV_NAME=/{print $2}' .env.vnet-checklist | tail -n1)
+NEW_GATEWAY_APP=$(awk -F= '/^NEW_GATEWAY_APP=/{print $2}' .env.vnet-checklist | tail -n1)
+NEW_HELLO_APP=$(awk -F= '/^NEW_HELLO_APP=/{print $2}' .env.vnet-checklist | tail -n1)
+
 {
   echo "ACA_ENV_NAME=${NEW_ACA_ENV_NAME}"
   echo "GATEWAY_APP=${NEW_GATEWAY_APP}"
