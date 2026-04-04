@@ -5,20 +5,23 @@
 
 ## 現在ステータス（2026-04-04）
 
-- このドキュメントは **計画段階**。
-- Section 1-2 完了（設計確定・ベースライン取得）
-- Section 3 PoC 方針確定
+- このドキュメントは **計画・テンプレート段階**。
+- **セキュリティ**: 実環境値は `.env.vnet-checklist` （`.gitignore` 対象）に記録。本ドキュメントはプレースホルダーのみ。
+- Section 1-2: 実施ガイド確定
+- Section 3: PoC 実装方針確定
 - 次段階：VNet 作成 & NSG ルール適用（Section 3 実装）
 - その後：Section 4 確認（VNet 適用後テスト）
 - 下記チェックボックスを実施順に埋める。
 
 ## 実施ログ
 
-- 実施日: 2026-04-04
-- 実施者: mtok
-- 対象環境（RG/ACA Env）: aca-test-env / aca-test-env
-- 変更チケット/PR:
+- 実施日: `<YYYY-MM-DD>`
+- 実施者: `<YOUR_NAME>`
+- 対象環境（RG/ACA Env）: `<RESOURCE_GROUP>` / `<ACA_ENV_NAME>`
+- 変更チケット/PR: `<TICKET_OR_PR_URL>`
 - 備考: VNet導入前ベースラインとして `make doctor` / `make smoke` / `make routes` 実行済み
+
+**注記:** 実際の環境値は `.env.vnet-checklist` に記録してください（`.gitignore` 対象）
 
 ## 1. 先に決めること（設計）
 
@@ -44,9 +47,9 @@
 - 「hello-api を外に出さない」は internal ingress の責務。
 - 「どこにどう繋ぐかを厳密に制御する」は VNet の責務。
 
-## 2. VNet導入前の現状固定（2026-04-04 実施済み）
+## 2. VNet導入前の現状固定
 
-- [x] 日次確認を実行して、現状の正常値を記録する。
+- [ ] 日次確認を実行して、現状の正常値を記録する。
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
@@ -55,8 +58,7 @@ make smoke
 make routes
 ```
 
-
-- [x] 以下を記録する。
+- [ ] 以下を記録する（`.env.vnet-checklist` に記入）。
 	- `RESOURCE_GROUP`
 	- `ACA_ENV_NAME`
 	- `GATEWAY_APP`
@@ -64,13 +66,13 @@ make routes
 	- `GATEWAY_FQDN`
 	- 現在の APISIX revision 名
 
-記録値:
-- `RESOURCE_GROUP=aca-test-env`
-- `ACA_ENV_NAME=aca-test-env`
-- `GATEWAY_APP=apisix-gateway`
-- `HELLO_APP=hello-api`
-- `GATEWAY_FQDN=apisix-gateway.delightfulstone-17625bbb.japaneast.azurecontainerapps.io`
-- `APISIX revision=apisix-gateway--0000034`
+記録方法：
+```bash
+cp .env.vnet-checklist.example .env.vnet-checklist
+# .env.vnet-checklist を編集して実値を記入
+```
+
+（`.env.vnet-checklist` は `.gitignore` 対象のため公開されません）
 
 ## 3. ネットワーク境界の目標状態
 
