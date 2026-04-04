@@ -9,8 +9,9 @@
 - **セキュリティ**: 実環境値は `.env.vnet-checklist` （`.gitignore` 対象）に記録。本ドキュメントはプレースホルダーのみ。
 - Section 1-2: 実施ガイド確定
 - Section 3: VNet/Subnet/NSG 作成手順を `make vnet-poc` に統一
-- Section 4: VNet 統合環境で `smoke` / `routes` 検証を実施済み
-- 次段階：Section 5（Dashboard導入条件の整理）
+- Section 4: VNet 統合環境で `doctor` / `smoke` / `routes` 検証を実施済み
+- Section 5: Dashboard導入条件を PoC 観点で確認済み
+- 次段階：Dashboard PoC の要否判断（スクリプト運用継続か、UI運用へ拡張か）
 - 下記チェックボックスを実施順に埋める。
 
 ## 実施ログ
@@ -126,22 +127,22 @@ make vnet-poc
 
 ## 4. VNet適用後の確認項目
 
-- [ ] 事前健全性確認
+- [x] 事前健全性確認
 
 ```bash
-make doctor
+ENV_FILE=.env.vnet-runtime make doctor
 ```
 
-- [ ] データプレーン疎通
+- [x] データプレーン疎通
 
 ```bash
-make smoke
+ENV_FILE=.env.vnet-runtime make smoke
 ```
 
-- [ ] 管理系確認
+- [x] 管理系確認
 
 ```bash
-make routes
+ENV_FILE=.env.vnet-runtime make routes
 ```
 
 - [ ] ルート再投入（必要時のみ）
@@ -150,17 +151,22 @@ make routes
 make routes-apply
 ```
 
-- [ ] 期待結果を満たす
-	- `make smoke` が成功（login成功、`/hello` 成功、未認証 `403`）
-	- `make routes` で route 一覧が表示される、または route-loader ログで登録完了が確認できる
+- [x] 期待結果を満たす
+	- `ENV_FILE=.env.vnet-runtime make smoke` が成功（login成功、`/hello` 成功、未認証 `403`）
+	- `ENV_FILE=.env.vnet-runtime make routes` で route 一覧を確認
+	- 旧環境（`apisix-gateway` / `hello-api`）の active revision を停止した状態でも、VNet側 smoke が成功
 
 ## 5. Dashboard導入の着手条件
 
 以下を満たしたら Dashboard を検討する。
 
-- [ ] VNet境界と管理経路が確定している。
-- [ ] 日次確認（doctor/smoke/routes）が連続で安定している。
-- [ ] ルート更新の責務を一本化できている（Dashboard かスクリプトのどちらか）。
+- [x] VNet境界と管理経路が確定している。
+- [x] 日次確認（doctor/smoke/routes）が安定している（PoC範囲）。
+- [x] ルート更新の責務を一本化できている（現時点はスクリプト運用）。
+
+判断メモ:
+- 現段階では「Dashboardなし（スクリプト運用）」でも要件を満たせる。
+- Dashboard 導入は、運用者増加や手動ルート編集ニーズが出た時点で再評価する。
 
 ## 6. 運用ルール（推奨）
 
