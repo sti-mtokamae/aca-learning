@@ -50,6 +50,22 @@ fi
 
 IMAGE_REF="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 
+ACR_USERNAME="${ACR_USERNAME:-}"
+ACR_PASSWORD="${ACR_PASSWORD:-}"
+
+if [[ -z "$ACR_USERNAME" ]]; then
+  ACR_USERNAME="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
+fi
+
+if [[ -z "$ACR_PASSWORD" ]]; then
+  ACR_PASSWORD="$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)"
+fi
+
+if [[ -z "$ACR_USERNAME" || -z "$ACR_PASSWORD" ]]; then
+  echo "ERROR: failed to resolve ACR credentials for $ACR_NAME"
+  exit 1
+fi
+
 echo "1) Build jar and container image"
 mvn -q clean package -DskipTests
 docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
@@ -61,6 +77,14 @@ docker push "$IMAGE_REF"
 
 echo "3) Create or update Container App"
 if az containerapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+  az containerapp registry set \
+    --name "$APP_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --server "${ACR_NAME}.azurecr.io" \
+    --username "$ACR_USERNAME" \
+    --password "$ACR_PASSWORD" \
+    -o none
+
   az containerapp update \
     --name "$APP_NAME" \
     --resource-group "$RESOURCE_GROUP" \
@@ -76,6 +100,9 @@ else
     --resource-group "$RESOURCE_GROUP" \
     --environment "$ACA_ENV_NAME" \
     --image "$IMAGE_REF" \
+    --registry-server "${ACR_NAME}.azurecr.io" \
+    --registry-username "$ACR_USERNAME" \
+    --registry-password "$ACR_PASSWORD" \
     --target-port 8080 \
     --ingress external \
     --min-replicas 1 \

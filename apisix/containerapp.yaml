@@ -1,4 +1,4 @@
-name: apisix-gateway
+name: __GATEWAY_APP__
 location: japaneast
 properties:
   managedEnvironmentId: __MANAGED_ENVIRONMENT_ID__

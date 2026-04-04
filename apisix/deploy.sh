@@ -27,12 +27,6 @@ if [[ -z "$APISIX_ADMIN_KEY" ]]; then
   exit 1
 fi
 
-if [[ "$GATEWAY_APP" != "apisix-gateway" ]]; then
-  echo "ERROR: Current template expects GATEWAY_APP=apisix-gateway"
-  echo "(containerapp.yaml has a fixed name field)."
-  exit 1
-fi
-
 if [[ ! -f "$TEMPLATE_PATH" ]]; then
   echo "ERROR: template not found: $TEMPLATE_PATH"
   exit 1
@@ -68,11 +62,13 @@ escape_sed_replacement() {
 
 APISIX_ADMIN_KEY_ESCAPED="$(escape_sed_replacement "$APISIX_ADMIN_KEY")"
 
-sed \
+# Normalize CRLF->LF to avoid Azure CLI YAML parser issues, then replace placeholders.
+tr -d '\r' < "$TEMPLATE_PATH" | sed \
+  -e "s|__GATEWAY_APP__|$GATEWAY_APP|g" \
   -e "s|__MANAGED_ENVIRONMENT_ID__|$MANAGED_ENV_ID|g" \
   -e "s|__HELLO_API_HOST__|$HELLO_API_FQDN|g" \
   -e "s|__APISIX_ADMIN_KEY__|$APISIX_ADMIN_KEY_ESCAPED|g" \
-  "$TEMPLATE_PATH" > "$RESOLVED_PATH"
+  > "$RESOLVED_PATH"
 
 echo "4) Deploy/update APISIX gateway (co-located etcd + apisix)"
 if az containerapp show --name "$GATEWAY_APP" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
@@ -81,7 +77,18 @@ if az containerapp show --name "$GATEWAY_APP" --resource-group "$RESOURCE_GROUP"
     --resource-group "$RESOURCE_GROUP" \
     --yaml "$RESOLVED_PATH" >/dev/null
 else
+  # create --yaml is unreliable in some CLI builds; create a minimal app first, then apply YAML.
   az containerapp create \
+    --name "$GATEWAY_APP" \
+    --resource-group "$RESOURCE_GROUP" \
+    --environment "$ACA_ENV_NAME" \
+    --image mcr.microsoft.com/azuredocs/containerapps-helloworld:latest \
+    --target-port 80 \
+    --ingress external \
+    >/dev/null
+
+  az containerapp update \
+    --name "$GATEWAY_APP" \
     --resource-group "$RESOURCE_GROUP" \
     --yaml "$RESOLVED_PATH" >/dev/null
 fi

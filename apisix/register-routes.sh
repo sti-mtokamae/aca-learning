@@ -14,7 +14,8 @@ fi
 
 # Configuration
 RESOURCE_GROUP=${RESOURCE_GROUP:-"aca-test-env"}
-GATEWAY_APP="apisix-gateway"
+GATEWAY_APP="${GATEWAY_APP:-apisix-gateway}"
+HELLO_APP="${HELLO_APP:-hello-api}"
 API_KEY="${APISIX_ADMIN_KEY:-${API_KEY:-}}"
 
 if [[ -z "$API_KEY" ]]; then
@@ -26,7 +27,7 @@ fi
 echo "=== Registering APISIX routes via Admin API ==="
 
 # Get hello-api FQDN
-HELLO_API_FQDN=$(az containerapp show -g "$RESOURCE_GROUP" -n "hello-api" --query "properties.configuration.ingress.fqdn" -o tsv)
+HELLO_API_FQDN=$(az containerapp show -g "$RESOURCE_GROUP" -n "$HELLO_APP" --query "properties.configuration.ingress.fqdn" -o tsv)
 echo "Hello API FQDN: $HELLO_API_FQDN"
 
 # Get gateway FQDN  
