@@ -1,4 +1,4 @@
-.PHONY: smoke doctor routes routes-apply rotate-apisix-key
+.PHONY: smoke doctor routes routes-apply rotate-apisix-key vnet-poc
 
 smoke:
 	./scripts/smoke.sh
@@ -14,3 +14,6 @@ routes-apply:
 
 rotate-apisix-key:
 	./scripts/rotate-apisix-admin-key.sh
+
+vnet-poc:
+	./scripts/create-vnet-poc.sh

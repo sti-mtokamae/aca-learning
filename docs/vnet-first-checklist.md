@@ -94,6 +94,36 @@ cp .env.vnet-checklist.example .env.vnet-checklist
 | Managed ID | 有効化済みが前提 | Storage/KeyVault アクセス予定 |
 | NSG | 最小限（app-to-app + storage-out） | 本番で細粒度化 |
 
+### Section 3 実行手順（PoC）
+
+- [ ] ローカル作業ファイルを準備する（未作成の場合のみ）
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+cp .env.vnet-checklist.example .env.vnet-checklist
+# .env.vnet-checklist のプレースホルダーを実値で埋める
+```
+
+- [ ] VNet / Subnet / NSG を作成する
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+make vnet-poc
+```
+
+- [ ] 実行結果を記録する
+
+記録項目（.env.vnet-checklist）:
+- `VNET_NAME`
+- `SUBNET_NAME`
+- `NSG_NAME`
+- `NEW_ACA_ENV_NAME`
+- `DEPLOYMENT_DATE`
+
+補足:
+- `make vnet-poc` は `scripts/create-vnet-poc.sh` を実行する。
+- 初回PoCでは deny ルールは自動追加しない（ACA 制御面の疎通確認を優先）。
+
 ## 4. VNet適用後の確認項目
 
 - [ ] 事前健全性確認
