@@ -219,11 +219,22 @@ curl -v -X POST "https://$GATEWAY_FQDN/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$APP_SECURITY_USERNAME\",\"password\":\"$APP_SECURITY_PASSWORD\"}"
 
-# 3. APISIX ルート確認
+# 3. APISIX ルート確認（推奨: make routes）
+make routes
+
+# 4. ルート再投入（必要時）
+make routes-apply
+
+# 5. 直接確認（補助）
 az containerapp exec \
   --name "$GATEWAY_APP" \
   --resource-group "$RESOURCE_GROUP" \
-  --command "/bin/sh -c 'curl -s http://127.0.0.1:9180/apisix/admin/routes -H \"X-API-KEY: $APISIX_ADMIN_KEY\"'"
+  --container route-loader \
+  --command "/bin/sh -c 'curl -sS -H \"X-API-KEY: $APISIX_ADMIN_KEY\" http://127.0.0.1:9180/apisix/admin/routes'"
+
+# NOTE:
+# az containerapp exec は管理プレーン制限により 429 / ClusterExecFailure になる場合があります。
+# その場合は少し待って再試行し、データプレーン確認（make smoke）を優先してください。
 ```
 
 ### hello-api が internal で外から見えない

@@ -11,6 +11,27 @@
 - 現行の検証済み構成・ネットワーク方針: [docs/aca-networking-notes.md](docs/aca-networking-notes.md)
 - ドキュメント一覧: [docs/README.md](docs/README.md)
 
+## 🛠 日次運用コマンド
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
+# 前提チェック（コマンド・.env・Azure疎通）
+make doctor
+
+# スモークテスト（JWT login -> /hello 200 -> 未認証 403）
+make smoke
+
+# APISIX ルート一覧確認（exec が 429 になる場合あり）
+make routes
+
+# ルート再投入（必要時）
+make routes-apply
+
+# APISIX_ADMIN_KEY ローテーション（デプロイ/再投入/スモーク/失敗時ロールバックを自動実行）
+make rotate-apisix-key
+```
+
 ## 🚀 実習手順
 
 ### 事前準備: 秘匿情報を `.env` に集約（必須）
@@ -175,9 +196,18 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" "$GATEWAY/hello"
 #### 4-3. 自動化スクリプト
 
 ```bash
-# Gateway 経由のテスト
+# 推奨: Make ターゲット
 cd /home/mtok/dev.home/aca-learning
-GATEWAY_URL="https://$GATEWAY_FQDN" ./apisix/verify-jwt-via-gateway.sh
+make smoke
+
+# 必要時の補助コマンド
+make doctor
+make routes
+make routes-apply
+make rotate-apisix-key
+
+# 直接実行する場合（make smoke の実体）
+./scripts/smoke.sh
 
 # 詳細なテストプロセス
 # See: docs/verification.md
