@@ -11,6 +11,11 @@
 - VNet先行の移行手順: [docs/vnet-first-checklist.md](docs/vnet-first-checklist.md)
 - ドキュメント一覧: [docs/README.md](docs/README.md)
 
+## ✅ 現在の到達点
+- 既存環境（`hello-api` / `apisix-gateway`）の運用コマンドは安定化済み
+- VNet PoC ネットワーク作成（VNet/Subnet/NSG）を `make vnet-poc` で再実行可能化
+- VNet 統合 ACA Environment への `hello-api-vnet` / `apisix-gateway-vnet` デプロイと smoke/routes 確認まで完了
+
 ## 🛠 日次運用コマンド
 
 ```bash
@@ -30,7 +35,33 @@ make routes-apply
 
 # APISIX_ADMIN_KEY ローテーション（デプロイ/再投入/スモーク/失敗時ロールバックを自動実行）
 make rotate-apisix-key
+
+# VNet PoC 用ネットワーク作成（VNet/Subnet/NSG）
+make vnet-poc
 ```
+
+## 🔀 VNet環境向け実行の要点
+
+既存 `make` コマンドは既定で `.env` を読むため、VNet 側検証時は `ENV_FILE` を切り替えて実行します。
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
+# .env + .env.vnet-checklist を合成したローカル実行用ファイルを作成
+cat .env .env.vnet-checklist > .env.vnet-runtime
+{
+  echo "ACA_ENV_NAME=${NEW_ACA_ENV_NAME}"
+  echo "GATEWAY_APP=${NEW_GATEWAY_APP}"
+  echo "HELLO_APP=${NEW_HELLO_APP}"
+} >> .env.vnet-runtime
+
+# VNet側での確認
+ENV_FILE=.env.vnet-runtime make doctor
+ENV_FILE=.env.vnet-runtime make smoke
+ENV_FILE=.env.vnet-runtime make routes
+```
+
+`.env.vnet-runtime` は `.env.*` に該当するため Git には含まれません。
 
 ## 🚀 実習手順
 

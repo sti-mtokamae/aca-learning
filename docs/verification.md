@@ -204,6 +204,35 @@ API_URL=$(az containerapp show \
 API_URL="https://$API_URL" ./scripts/verify-jwt-direct.sh
 ```
 
+## VNet 環境での検証実行
+
+既定のスクリプトは `.env` を読むため、VNet 側検証では一時的な実行用 env を作って `ENV_FILE` を切り替える。
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
+# 1) 実行用 env を作成（ローカルのみ）
+cat .env .env.vnet-checklist > .env.vnet-runtime
+{
+  echo "ACA_ENV_NAME=${NEW_ACA_ENV_NAME}"
+  echo "GATEWAY_APP=${NEW_GATEWAY_APP}"
+  echo "HELLO_APP=${NEW_HELLO_APP}"
+} >> .env.vnet-runtime
+
+# 2) VNet 側 smoke/routes
+ENV_FILE=.env.vnet-runtime ./scripts/smoke.sh
+ENV_FILE=.env.vnet-runtime ./scripts/routes.sh
+
+# 3) make ターゲット経由でも同様
+ENV_FILE=.env.vnet-runtime make doctor
+ENV_FILE=.env.vnet-runtime make smoke
+ENV_FILE=.env.vnet-runtime make routes
+```
+
+補足:
+- `.env.vnet-runtime` は `.env.*` で ignore される（Git未追跡）。
+- 検証後は不要なら `rm -f .env.vnet-runtime` で削除する。
+
 ## Troubleshooting
 
 ### Token で 401/403 が返る
@@ -283,4 +312,4 @@ curl -v https://$API_FQDN/api/health 2>&1 | grep -E "Connection refused|Couldn't
 - パフォーマンステスト: load test scripts
 - セキュリティ監査: Azure Security Center scan
 - スケール検証: 複数レプリカ時の動作
-- 本番化前チェックリスト: docs/split-scale-migration-playbook.md 参照
+- 本番化前チェックリスト: `vnet-first-checklist.md` の Section 5 を更新

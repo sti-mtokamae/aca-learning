@@ -3,14 +3,14 @@
 このチェックリストは、APISIX Dashboard導入より前にネットワーク境界を固めるための最小手順です。
 現行構成（`apisix-gateway` 外部公開、`hello-api` 内部利用）を前提にしています。
 
-## 現在ステータス（2026-04-04）
+## 現在ステータス（2026-04-05）
 
-- このドキュメントは **計画・テンプレート段階**。
+- このドキュメントは **実施ログ付きテンプレート**。
 - **セキュリティ**: 実環境値は `.env.vnet-checklist` （`.gitignore` 対象）に記録。本ドキュメントはプレースホルダーのみ。
 - Section 1-2: 実施ガイド確定
-- Section 3: PoC 実装方針確定
-- 次段階：VNet 作成 & NSG ルール適用（Section 3 実装）
-- その後：Section 4 確認（VNet 適用後テスト）
+- Section 3: VNet/Subnet/NSG 作成手順を `make vnet-poc` に統一
+- Section 4: VNet 統合環境で `smoke` / `routes` 検証を実施済み
+- 次段階：Section 5（Dashboard導入条件の整理）
 - 下記チェックボックスを実施順に埋める。
 
 ## 実施ログ
