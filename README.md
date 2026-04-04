@@ -8,7 +8,7 @@
 - JWT 認証を含む API 保護の実装と確認
 
 ## 🗂 最新の検証記録
-- 現行の検証済み構成・ネットワーク方針: [docs/aca-networking-notes.md](docs/aca-networking-notes.md)
+- VNet先行の移行手順: [docs/vnet-first-checklist.md](docs/vnet-first-checklist.md)
 - ドキュメント一覧: [docs/README.md](docs/README.md)
 
 ## 🛠 日次運用コマンド
