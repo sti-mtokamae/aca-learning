@@ -7,15 +7,15 @@
 
 (specifications->manifest
   '(
-    ;; Java
-    "openjdk"
+    ;; Java (17 = LTS, module system compatible)
+    "openjdk@17"
 
     ;; Build tools
-    "maven"
-    "git"
+    "maven@3.8"
+    "git@2"
 
     ;; Container
-    "docker"
+    "docker@20"
 
     ;; Utilities
     "jq"          ; JSON parsing/manipulation
