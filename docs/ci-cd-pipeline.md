@@ -246,68 +246,169 @@ Settings → Environments → production
 
 ## セキュリティ / 認証
 
-### GitHub Secrets 登録（必須）
+詳細は **Phase 0** の「GitHub Secrets & OIDC セットアップ」を参照してください。
 
-GitHub Actions で使用する秘密情報を GitHub Secrets に登録：
+**概要:**
+- GitHub Secrets で秘密情報を管理（CI/CD workflows で `${{ secrets.* }}` として参照）
+- Azure OIDC で GitHub → Azure 認証（Service Principal 不要）
+- ACR push 権限を GitHub Managed Identity に付与
+
+これらはすべて Phase 0 で一度だけ設定します。
+
+## 実装フェーズ
+
+### Phase 0: GitHub Secrets & OIDC セットアップ（初回のみ）
+
+このセクションは **最初に一度だけ実行** してください。Azure OIDC連携と GitHub Secrets登録は workflow実行の前提です。
+
+#### 0-1. 前提条件
+
+- GitHub リポジトリへのアクセス権（Settings 可能）
+- Azure `az` CLI でログイン済み
+- `gh` CLI インストール済み
+
+#### 0-2. GitHub CLI でログイン
+
+```bash
+# 初回のみ
+gh auth login
+
+# リポジトリ確認
+gh repo view --json name
+```
+
+#### 0-3. GitHub Secrets 登録
+
+ローカル `.env` から値を読み込み、`gh` CLI で登録します：
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
 
-# .env から値を読む（ローカルのみ、公開しない）
+# .env をロード
+set -a
 source .env
+set +a
 
-# gh CLI で登録（または GitHub UI から手入力）
+# Secrets を登録（上書き可能）
 gh secret set AZURE_CLIENT_ID --body "$AZURE_CLIENT_ID"
 gh secret set AZURE_TENANT_ID --body "$AZURE_TENANT_ID"
 gh secret set AZURE_SUBSCRIPTION_ID --body "$AZURE_SUBSCRIPTION_ID"
-gh secret set ACR_NAME --body "$ACR_NAME"
 gh secret set RESOURCE_GROUP --body "$RESOURCE_GROUP"
+gh secret set ACR_NAME --body "$ACR_NAME"
 gh secret set APP_SECURITY_USERNAME --body "$APP_SECURITY_USERNAME"
 gh secret set APP_SECURITY_PASSWORD --body "$APP_SECURITY_PASSWORD"
 gh secret set APP_JWT_SECRET --body "$APP_JWT_SECRET"
 gh secret set APISIX_ADMIN_KEY --body "$APISIX_ADMIN_KEY"
+gh secret set ACA_ENV_NAME --body "$ACA_ENV_NAME"
 
-# 確認
+# 登録確認
 gh secret list
 ```
 
 **注意:**
-- `.env` 値は絶対に Git に commit しない（`.gitignore` 対象）
-- GitHub Secrets に登録された値は、Actions のログには出力されません
-- Secrets 変更後は新しい Actions run から反映
+- Secrets は GitHub UI でも確認可能（Settings → Secrets and variables → Actions）
+- 一度登録後は値は読み出し不可（Masked される）
+- 変更時は `gh secret set` で上書き
 
-### GitHub × Azure 連携（OIDC）
+#### 0-4. Azure OIDC 連携設定
 
-Azure 側設定（1回のみ）:
+GitHub Actions で Azure に OIDC で認証するため、Azure 側に Federated Credential を登録：
 
 ```bash
-# Federated credential を登録
+# Azure で Managed Identity を作成（未作成の場合）
+az identity create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name github-ci-identity
+
+# Federated Credential を登録（main ブランチ）
 az identity federated-credential create \
   --resource-group "$RESOURCE_GROUP" \
-  --identity-name "github-ci-identity" \
+  --identity-name github-ci-identity \
   --issuer "https://token.actions.githubusercontent.com" \
-  --subject "repo:USERNAME/aca-learning:ref:refs/heads/main" \
+  --subject "repo:$(gh repo view --json nameWithOwner -q):ref:refs/heads/main" \
   --audience "api://AzureADTokenExchange"
+
+# 確認
+az identity federated-credential list \
+  --resource-group "$RESOURCE_GROUP" \
+  --identity-name github-ci-identity
 ```
 
-### ACR アクセス権限
+#### 0-5. ACR push 権限付与
+
+GitHub Actions の Identity に ACR push 権限を付与：
 
 ```bash
-# GitHub Actions の Managed Identity に ACR push 権限を付与
+# Managed Identity のクライアント ID を取得
+CLIENT_ID=$(az identity show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name github-ci-identity \
+  --query clientId -o tsv)
+
+# ACR リソース ID を取得
+ACR_RESOURCE_ID=$(az acr show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$ACR_NAME" \
+  --query id -o tsv)
+
+# Role assignment: ACR push
 az role assignment create \
   --role AcrPush \
-  --assignee <CLIENT_ID> \
-  --scope <ACR_RESOURCE_ID>
+  --assignee "$CLIENT_ID" \
+  --scope "$ACR_RESOURCE_ID"
+
+# 確認
+az role assignment list \
+  --assignee "$CLIENT_ID" \
+  --scope "$ACR_RESOURCE_ID"
 ```
 
-## 実装フェーズ
+#### 0-6. Environment protection rule（本番用）
 
-### Phase 0: GitHub Secrets セットアップ（初回のみ）
-- [ ] `gh auth login` で GitHub CLI ログイン
-- [ ] `gh secret set` で全 secrets 登録（`.env` より）
-- [ ] `gh secret list` で確認
-- [ ] Azure OIDC 設定
-- [ ] ACR push 権限付与
+GitHub の environment protection を設定（主に production デプロイ保護）:
+
+**GitHub UI から:**
+1. Settings → Environments → Create environment
+2. Environment name: `production`
+3. Required reviewers: チェック（2以上推奨）
+4. Deployment branches: 制限対象ブランチ（main のみなど）
+5. Secrets: このリポジトリの secrets を使用可能
+
+**確認:**
+```bash
+gh api repos/{owner}/{repo}/environments/production
+```
+
+#### 0-7. セットアップ確認チェックリスト
+
+```bash
+# すべてが完了したか確認
+echo "=== GitHub Secrets ===" 
+gh secret list
+
+echo ""
+echo "=== Azure Managed Identity ==="
+az identity show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name github-ci-identity
+
+echo ""
+echo "=== Federated Credentials ==="
+az identity federated-credential list \
+  --resource-group "$RESOURCE_GROUP" \
+  --identity-name github-ci-identity
+
+echo ""
+echo "=== ACR Role Assignments ==="
+CLIENT_ID=$(az identity show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name github-ci-identity \
+  --query clientId -o tsv)
+az role assignment list \
+  --assignee "$CLIENT_ID"
+```
+
+すべてが揃ったら **Phase 1 に進みます。**
 
 ### Phase 1: ローカル確認（今週）
 - [ ] `guix-manifest.scm` 作成
