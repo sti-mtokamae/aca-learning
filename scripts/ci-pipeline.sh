@@ -103,20 +103,20 @@ docker tag aca-hello-api:"$IMAGE_TAG" "$REGISTRY/aca-hello-api:latest"
 
 # ACR login
 echo "  - ACR login..."
-if ! az acr login --name "$ACR_NAME" -q; then
+if ! az acr login --name "$ACR_NAME"; then
   echo "ERROR: ACR login failed"
   exit 1
 fi
 
 # Push
 echo "  - Pushing $REGISTRY/aca-hello-api:$IMAGE_TAG..."
-if ! docker push "$REGISTRY/aca-hello-api:$IMAGE_TAG" -q; then
+if ! docker push "$REGISTRY/aca-hello-api:$IMAGE_TAG"; then
   echo "ERROR: Docker push failed"
   exit 1
 fi
 
 echo "  - Pushing $REGISTRY/aca-hello-api:latest..."
-if ! docker push "$REGISTRY/aca-hello-api:latest" -q; then
+if ! docker push "$REGISTRY/aca-hello-api:latest"; then
   echo "ERROR: Docker push (latest tag) failed"
   exit 1
 fi
@@ -139,8 +139,7 @@ echo "  - Environment: $ENV_NAME"
 if ! az containerapp update \
   --resource-group "$RESOURCE_GROUP" \
   --name "$APP_NAME" \
-  --image "$IMAGE_URI" \
-  -q; then
+  --image "$IMAGE_URI"; then
   echo "ERROR: Container App update failed"
   exit 1
 fi
