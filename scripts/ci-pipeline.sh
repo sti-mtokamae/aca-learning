@@ -70,6 +70,9 @@ echo ""
 echo "[1/4] Maven build..."
 cd "$REPO_ROOT/spring-hello"
 
+# Java module system compatibility fix (cglib + Spring Boot)
+export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED"
+
 if ! mvn clean package -DskipTests -q; then
   echo "ERROR: Maven build failed"
   exit 1
@@ -100,20 +103,20 @@ docker tag aca-hello-api:"$IMAGE_TAG" "$REGISTRY/aca-hello-api:latest"
 
 # ACR login
 echo "  - ACR login..."
-if ! az acr login --name "$ACR_NAME" -q; then
+if ! az acr login --name "$ACR_NAME"; then
   echo "ERROR: ACR login failed"
   exit 1
 fi
 
 # Push
 echo "  - Pushing $REGISTRY/aca-hello-api:$IMAGE_TAG..."
-if ! docker push "$REGISTRY/aca-hello-api:$IMAGE_TAG" -q; then
+if ! docker push "$REGISTRY/aca-hello-api:$IMAGE_TAG"; then
   echo "ERROR: Docker push failed"
   exit 1
 fi
 
 echo "  - Pushing $REGISTRY/aca-hello-api:latest..."
-if ! docker push "$REGISTRY/aca-hello-api:latest" -q; then
+if ! docker push "$REGISTRY/aca-hello-api:latest"; then
   echo "ERROR: Docker push (latest tag) failed"
   exit 1
 fi
@@ -131,13 +134,11 @@ IMAGE_URI="$REGISTRY/aca-hello-api:$IMAGE_TAG"
 
 echo "  - Updating Container App: $APP_NAME"
 echo "  - Image: $IMAGE_URI"
-echo "  - Environment: $ENV_NAME"
 
 if ! az containerapp update \
   --resource-group "$RESOURCE_GROUP" \
   --name "$APP_NAME" \
-  --image "$IMAGE_URI" \
-  -q; then
+  --image "$IMAGE_URI"; then
   echo "ERROR: Container App update failed"
   exit 1
 fi
