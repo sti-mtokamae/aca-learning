@@ -7,22 +7,22 @@
 
 (specifications->manifest
   '(
-    ;; Java
-    "openjdk@21"
+    ;; Java (バージョン指定なし = latest available)
+    "openjdk"
 
     ;; Build tools
-    "maven@3.8"
-    "git@2"
+    "maven"
+    "git"
 
     ;; Container
-    "docker@24"
+    "docker"
 
     ;; Utilities
-    "jq@1"          ; JSON parsing/manipulation
-    "curl@8"        ; HTTP client
-    "which@2"       ; Command locator
-    "coreutils@9"   ; Basic utilities (for scripts)
+    "jq"          ; JSON parsing/manipulation
+    "curl"        ; HTTP client
+    "which"       ; Command locator
+    "coreutils"   ; Basic utilities (for scripts)
 
     ;; Azure CLI（optional but recommended）
-    "azure-cli@2"
+    "azure-cli"
   ))
