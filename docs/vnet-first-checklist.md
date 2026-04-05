@@ -56,7 +56,7 @@
 
 ## 2. VNet導入前の現状固定
 
-- [ ] 日次確認を実行して、現状の正常値を記録する。
+- [x] 日次確認を実行して、現状の正常値を記録する。
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
@@ -65,7 +65,7 @@ make smoke
 make routes
 ```
 
-- [ ] 以下を記録する（`.env.vnet-checklist` に記入）。
+- [x] 以下を記録する（`.env.vnet-checklist` に記入）。
 	- `RESOURCE_GROUP`
 	- `ACA_ENV_NAME`
 	- `GATEWAY_APP`
@@ -83,8 +83,8 @@ cp .env.vnet-checklist.example .env.vnet-checklist
 
 ## 3. ネットワーク境界の目標状態
 
-- [ ] インターネット -> `apisix-gateway:9080`（公開 ingress）のみ許可。
-- [ ] `apisix-gateway` -> `hello-api:443`（internal FQDN）を NSG で許可。
+- [x] インターネット -> `apisix-gateway:9080`（公開 ingress）のみ許可。
+- [x] `apisix-gateway` -> `hello-api:443`（internal FQDN）を NSG で許可。
 - [ ] `hello-api` -> Azure Storage Files（PoC は Public + IP制限、本番は Private Endpoint検討）
 - [ ] `apisix-gateway` -> Azure Storage Files（同上）
 - [ ] 管理者 -> Admin API / APISIX Dashboard（実装未定、当面 az exec は許可、踏み台は未配置）
@@ -103,7 +103,7 @@ cp .env.vnet-checklist.example .env.vnet-checklist
 
 ### Section 3 実行手順（PoC）
 
-- [ ] ローカル作業ファイルを準備する（未作成の場合のみ）
+- [x] ローカル作業ファイルを準備する（未作成の場合のみ）
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
@@ -111,14 +111,14 @@ cp .env.vnet-checklist.example .env.vnet-checklist
 # .env.vnet-checklist のプレースホルダーを実値で埋める
 ```
 
-- [ ] VNet / Subnet / NSG を作成する
+- [x] VNet / Subnet / NSG を作成する
 
 ```bash
 cd /home/mtok/dev.home/aca-learning
 make vnet-poc
 ```
 
-- [ ] 実行結果を記録する
+- [x] 実行結果を記録する
 
 記録項目（.env.vnet-checklist）:
 - `VNET_NAME`
