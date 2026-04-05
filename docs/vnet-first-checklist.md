@@ -174,6 +174,7 @@ make routes-apply
 判断メモ:
 - 現段階では「Dashboardなし（スクリプト運用）」でも要件を満たせる。
 - Dashboard 導入は、運用者増加や手動ルート編集ニーズが出た時点で再評価する。
+- **計画案**: [apisix-dashboard-plan.md](apisix-dashboard-plan.md) を参照（開発用 internal-only、本番ではスクリプト運用で統一）。
 
 ## 6. 運用ルール（推奨）
 

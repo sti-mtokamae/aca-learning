@@ -2,6 +2,7 @@
 
 - **Verification & Testing**: [verification.md](verification.md) - スモークテストと動作確認手順
 - **VNet First Plan**: [vnet-first-checklist.md](vnet-first-checklist.md) - Dashboard導入前に進めるネットワーク先行チェック
+- **APISIX Dashboard Plan**: [apisix-dashboard-plan.md](apisix-dashboard-plan.md) - Dashboard 導入検討（開発用 internal-only + 本番スクリプト運用）
 
 この `docs/` 配下は、検証で確定した運用判断や移行方針を残す場所です。
 
