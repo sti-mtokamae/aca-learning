@@ -46,6 +46,8 @@ jobs:
       
       - name: Prepare environment
         run: |
+          set -x  # Enable debug output
+          
           # Build .env from secrets
           cat > .env << 'EOF'
           RESOURCE_GROUP=${{ secrets.RESOURCE_GROUP }}
@@ -63,7 +65,11 @@ jobs:
             exit 1
           fi
           
+          # Debug output
           echo "✓ .env prepared"
+          echo "---Contents of .env:---"
+          cat .env
+          echo "---End of .env---"
       
       - name: Determine target environment
         id: env-check
