@@ -35,13 +35,15 @@ ACA デプロイ完了
 ;; guix-manifest.scm
 (specifications->manifest
   '(
-    "openjdk@21"           ; Java
-    "maven@3.8"            ; Maven
-    "docker@20"            ; Docker CLI
-    "git@2"                ; Git
-    "jq@1"                 ; JSON parser（ログ整形用）
+    "openjdk"              ; Java（バージョン指定なし）
+    "maven"                ; Maven（バージョン指定なし）
+    "docker"               ; Docker CLI
+    "git"                  ; Git
+    "jq"                   ; JSON parser（ログ整形用）
   ))
 ```
+
+**注:** バージョン指定なし（`openjdk` ではなく `openjdk@21` など）により、ローカルと GitHub runner 間での環境差分を最小化。
 
 ### 2. ビルド環境起動
 
