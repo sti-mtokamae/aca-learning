@@ -1,5 +1,43 @@
 # Verification Guide - Running Smoke Tests
 
+## Quick Path
+
+最短確認は次の 2 パターンです。
+
+- 既存環境を確認する:
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+make doctor
+make smoke
+make routes
+```
+
+- VNet 環境を確認する:
+
+```bash
+cd /home/mtok/dev.home/aca-learning
+
+awk -F= '/^[A-Z0-9_]+=/ {print $0}' .env > .env.vnet-runtime
+awk -F= '/^[A-Z0-9_]+=/ {print $0}' .env.vnet-checklist >> .env.vnet-runtime
+
+NEW_ACA_ENV_NAME=$(awk -F= '/^NEW_ACA_ENV_NAME=/{print $2}' .env.vnet-checklist | tail -n1)
+NEW_GATEWAY_APP=$(awk -F= '/^NEW_GATEWAY_APP=/{print $2}' .env.vnet-checklist | tail -n1)
+NEW_HELLO_APP=$(awk -F= '/^NEW_HELLO_APP=/{print $2}' .env.vnet-checklist | tail -n1)
+
+{
+  echo "ACA_ENV_NAME=${NEW_ACA_ENV_NAME}"
+  echo "GATEWAY_APP=${NEW_GATEWAY_APP}"
+  echo "HELLO_APP=${NEW_HELLO_APP}"
+} >> .env.vnet-runtime
+
+ENV_FILE=.env.vnet-runtime make doctor
+ENV_FILE=.env.vnet-runtime make smoke
+ENV_FILE=.env.vnet-runtime make routes
+```
+
+手で curl を打つ詳細確認が必要なときだけ、この下の各セクションを使います。
+
 ## Prerequisites
 
 ### 1. .env ファイルの準備（必須）
@@ -130,7 +168,7 @@ fi
 
 ## Automated Verification Scripts
 
-### Option A: Single Script
+### Option A: Recommended Commands
 
 すべてのテストを一度に実行:
 
@@ -176,7 +214,7 @@ API_URL="https://$(az containerapp show \
   --query "properties.configuration.ingress.fqdn" -o tsv)" ./scripts/verify-jwt-direct.sh
 ```
 
-### Option B: Prepare .env then run scripts
+### Option B: Direct Script Calls
 
 ```bash
 # リポジトリルート
@@ -238,6 +276,7 @@ ENV_FILE=.env.vnet-runtime make routes
 補足:
 - `.env.vnet-runtime` は `.env.*` で ignore される（Git未追跡）。
 - 検証後は不要なら `rm -f .env.vnet-runtime` で削除する。
+- 旧環境停止後の確認でも同じ `.env.vnet-runtime` を使う。
 
 ## Troubleshooting
 

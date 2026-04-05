@@ -24,6 +24,12 @@
 
 **注記:** 実際の環境値は `.env.vnet-checklist` に記録してください（`.gitignore` 対象）
 
+## このドキュメントの使い方
+
+- ここでは「何を完了とみなすか」と「次に何を判断するか」を管理する。
+- 実行コマンドの詳細は [verification.md](verification.md) を参照する。
+- ローカル実値は `.env.vnet-checklist` にのみ記録し、この文書には残さない。
+
 ## 1. 先に決めること（設計）
 
 - [x] この検証は PoC とし、カスタムドメインは使わない。
@@ -124,6 +130,7 @@ make vnet-poc
 補足:
 - `make vnet-poc` は `scripts/create-vnet-poc.sh` を実行する。
 - 初回PoCでは deny ルールは自動追加しない（ACA 制御面の疎通確認を優先）。
+- VNet 側の `doctor` / `smoke` / `routes` 実行方法は [verification.md](verification.md) の「VNet 環境での検証実行」を参照する。
 
 ## 4. VNet適用後の確認項目
 
