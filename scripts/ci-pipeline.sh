@@ -70,6 +70,9 @@ echo ""
 echo "[1/4] Maven build..."
 cd "$REPO_ROOT/spring-hello"
 
+# Java module system compatibility fix (cglib + Spring Boot)
+export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED"
+
 if ! mvn clean package -DskipTests -q; then
   echo "ERROR: Maven build failed"
   exit 1
