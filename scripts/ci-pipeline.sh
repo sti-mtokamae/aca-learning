@@ -134,18 +134,12 @@ IMAGE_URI="$REGISTRY/aca-hello-api:$IMAGE_TAG"
 
 echo "  - Updating Container App: $APP_NAME"
 echo "  - Image: $IMAGE_URI"
-echo "  - Environment: $ENV_NAME"
-echo "  - Resource Group: $RESOURCE_GROUP"
 
 if ! az containerapp update \
   --resource-group "$RESOURCE_GROUP" \
   --name "$APP_NAME" \
   --image "$IMAGE_URI"; then
   echo "ERROR: Container App update failed"
-  # Debug: list available apps
-  echo ""
-  echo "[DEBUG] Available container apps in $RESOURCE_GROUP:"
-  az containerapp list -g "$RESOURCE_GROUP" --query "[].name" -o tsv
   exit 1
 fi
 
