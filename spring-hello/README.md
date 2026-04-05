@@ -37,18 +37,44 @@ set -a
 source ../.env
 set +a
 
-# 必要に応じて ACR_NAME だけ上書き
-ACR_NAME=yourregistry \
+# .env の値を使ってそのままデプロイ
 ./deploy-aca.sh
+```
+
+### 2-1. VNet 統合 ACA Environment へデプロイ
+```bash
+cd /home/mtok/dev.home/aca-learning/spring-hello
+
+# 既定 .env を読み込みつつ、VNet 側の app/env 名だけ切り替える
+ENV_FILE=../.env \
+ACA_ENV_NAME=aca-test-env-vnet \
+APP_NAME=hello-api-vnet \
+./deploy-aca.sh
+
+# VNet 側では internal ingress に揃える
+az containerapp ingress enable \
+  --resource-group aca-test-env \
+  --name hello-api-vnet \
+  --type internal \
+  --target-port 8080
 ```
 
 ### 3. ACA 上の JWT 動作確認
 ```bash
+# .env の APP_SECURITY_PASSWORD を使う場合
+set -a
+source ../.env
+set +a
+
 APP_URL=https://hello-api.<your-fqdn> \
 APP_SECURITY_USERNAME=acauser \
-APP_SECURITY_PASSWORD=REPLACE_ME_STRONG_PASSWORD \
+APP_SECURITY_PASSWORD="$APP_SECURITY_PASSWORD" \
 ./verify-jwt-aca.sh
 ```
+
+補足:
+- `hello-api-vnet` のように internal ingress の場合は、外部端末から直接 `verify-jwt-aca.sh` は実行しない。
+- VNet PoC では APISIX 経由の確認を正とし、詳細は `../docs/verification.md` を参照する。
 
 ## API エンドポイント
 
@@ -98,3 +124,4 @@ curl -H "Authorization: Bearer <token>" http://localhost:8080/api/hello
 ## 追加スクリプト
 - `deploy-aca.sh`: ビルド、ACR push、Container App create/update を一括実行
 - `verify-jwt-aca.sh`: ACA 上で login -> Bearer 呼び出し -> 未認証拒否まで確認
+- `build.sh`: ローカルビルドと Docker イメージ作成
