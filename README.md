@@ -111,21 +111,26 @@ echo "✓ .env is ready"
 
 ### Step 1: ACA環境構築
 ```bash
+# .env を読み込む
+set -a
+source ./.env
+set +a
+
 # 基本環境作成
-az group create --name aca-learning-rg --location japaneast
+az group create --name "$RESOURCE_GROUP" --location japaneast
 
 az monitor log-analytics workspace create \
-  --resource-group aca-learning-rg \
+  --resource-group "$RESOURCE_GROUP" \
   --workspace-name aca-learning-logs
 
 LOG_WORKSPACE_ID=$(az monitor log-analytics workspace show \
-  --resource-group aca-learning-rg \
+  --resource-group "$RESOURCE_GROUP" \
   --workspace-name aca-learning-logs \
   --query id -o tsv)
 
 az containerapp env create \
-  --name aca-learning-env \
-  --resource-group aca-learning-rg \
+  --name "$ACA_ENV_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
   --location japaneast \
   --logs-workspace-id $LOG_WORKSPACE_ID
 ```
@@ -269,18 +274,28 @@ make rotate-apisix-key
 
 ### 運用監視
 ```bash
+# .env を読み込む
+set -a
+source ./.env
+set +a
+
 # Container Apps ログ確認
-az containerapp logs show --name hello-api --resource-group aca-learning-rg --follow
-az containerapp logs show --name apisix-gateway --resource-group aca-learning-rg --follow
+az containerapp logs show --name "$HELLO_APP" --resource-group "$RESOURCE_GROUP" --follow
+az containerapp logs show --name "$GATEWAY_APP" --resource-group "$RESOURCE_GROUP" --follow
 
 # スケーリング状況
-az containerapp revision list --name hello-api --resource-group aca-learning-rg
+az containerapp revision list --name "$HELLO_APP" --resource-group "$RESOURCE_GROUP"
 ```
 
 ## 🧹 クリーンアップ
 ```bash
+# .env を読み込む
+set -a
+source ./.env
+set +a
+
 # 全リソース削除 (学習完了後)
-az group delete --name aca-learning-rg --yes --no-wait
+az group delete --name "$RESOURCE_GROUP" --yes --no-wait
 ```
 
 ## 📚 次のステップ
@@ -292,16 +307,29 @@ az group delete --name aca-learning-rg --yes --no-wait
 ## 📁 ファイル構成
 ```
 /home/mtok/dev.home/aca-learning/
+├── Makefile
+├── docs/
+│   ├── README.md
+│   ├── verification.md
+│   └── vnet-first-checklist.md
+├── scripts/
+│   ├── doctor.sh
+│   ├── rotate-apisix-admin-key.sh
+│   ├── routes.sh
+│   ├── smoke.sh
+│   └── create-vnet-poc.sh
 ├── spring-hello/
 │   ├── pom.xml
 │   ├── Dockerfile  
 │   ├── build.sh
+│   ├── deploy-aca.sh
 │   ├── README.md
+│   ├── verify-jwt-aca.sh
 │   └── src/main/java/com/example/acahello/
 ├── apisix/
-│   ├── config.yaml
 │   ├── containerapp.yaml
 │   ├── deploy.sh
+│   ├── register-routes.sh
 │   ├── setup-routes.sh
 │   └── verify-jwt-via-gateway.sh
 └── README.md (このファイル)
