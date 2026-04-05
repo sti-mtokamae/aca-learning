@@ -67,11 +67,11 @@ az containerapp list \
   --query "[].{name:name, state:properties.runningStatus}" \
   -o table
 
-# Expected output:
-# Name            State
-# -----------------------
-# hello-api       Running
-# apisix-gateway  Running
+# Expected output（環境によってアプリ名は異なる）:
+# Name                   State
+# ------------------------------
+# hello-api-vnet         Running
+# apisix-gateway-vnet    Running
 # (その他)
 ```
 
