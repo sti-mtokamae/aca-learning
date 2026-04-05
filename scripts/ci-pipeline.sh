@@ -139,6 +139,7 @@ echo "  - Environment: $ENV_NAME"
 if ! az containerapp update \
   --resource-group "$RESOURCE_GROUP" \
   --name "$APP_NAME" \
+  --environment "$ENV_NAME" \
   --image "$IMAGE_URI"; then
   echo "ERROR: Container App update failed"
   exit 1
