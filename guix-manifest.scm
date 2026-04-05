@@ -7,7 +7,7 @@
 
 (specifications->manifest
   '(
-    ;; Java (バージョン指定なし = latest available)
+    ;; Java
     "openjdk"
 
     ;; Build tools
@@ -22,7 +22,4 @@
     "curl"        ; HTTP client
     "which"       ; Command locator
     "coreutils"   ; Basic utilities (for scripts)
-
-    ;; Azure CLI（optional but recommended）
-    "azure-cli"
   ))
