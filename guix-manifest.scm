@@ -11,11 +11,11 @@
     "openjdk"
 
     ;; Build tools
-    "maven@3.8"
-    "git@2"
+    "maven"
+    "git"
 
     ;; Container
-    "docker@20"
+    "docker"
 
     ;; Utilities
     "jq"          ; JSON parsing/manipulation

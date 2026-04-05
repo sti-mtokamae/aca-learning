@@ -1,4 +1,4 @@
-FROM eclipse-temurin:latest-jre-jammy
+FROM eclipse-temurin:latest
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends curl \
