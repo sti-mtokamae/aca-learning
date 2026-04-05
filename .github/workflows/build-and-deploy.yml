@@ -3,7 +3,6 @@ name: Build and Deploy to ACA
 on:
   push:
     branches:
-      - main
       - develop
   pull_request:
     branches:
@@ -22,7 +21,7 @@ jobs:
       id-token: write
     
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      name: development
     
     steps:
       - name: Checkout
@@ -65,23 +64,12 @@ jobs:
           
           echo "✓ .env prepared"
       
-      - name: Determine target environment
-        id: env-check
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "TARGET_ENV=prod" >> $GITHUB_OUTPUT
-            echo "🔴 Production deployment"
-          else
-            echo "TARGET_ENV=dev" >> $GITHUB_OUTPUT
-            echo "🟢 Development deployment"
-          fi
-      
       - name: Build, push, and deploy
         run: |
           # Execute pipeline with guix + script
           guix shell -m guix-manifest.scm -- \
             ./scripts/ci-pipeline.sh \
-            "${{ steps.env-check.outputs.TARGET_ENV }}" \
+            "dev" \
             "${{ github.run_number }}"
       
       - name: Post-deployment verification

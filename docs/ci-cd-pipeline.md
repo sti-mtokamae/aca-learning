@@ -166,7 +166,6 @@ name: Build and Deploy to ACA
 on:
   push:
     branches:
-      - main
       - develop
   pull_request:
     branches:
@@ -181,7 +180,7 @@ jobs:
       id-token: write  # OIDC
     
     environment:
-      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+      name: development
     
     steps:
       - name: Checkout
@@ -216,15 +215,9 @@ jobs:
           APISIX_ADMIN_KEY=${{ secrets.APISIX_ADMIN_KEY }}
           EOF
           
-          # 環境判定
-          TARGET_ENV="dev"
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            TARGET_ENV="prod"
-          fi
-          
           # guix shell で実行
           guix shell -m guix-manifest.scm -- \
-            ./scripts/ci-pipeline.sh "$TARGET_ENV" "${{ github.run_number }}"
+            ./scripts/ci-pipeline.sh "dev" "${{ github.run_number }}"
 ```
 
 ### デプロイ戦略
@@ -232,21 +225,9 @@ jobs:
 | トリガー | ターゲット環境 | 自動/手動 | 備考 |
 |---------|---------------|---------|------|
 | push to `develop` | VNet test env (`hello-api-vnet`) | 自動 | 開発・検証用 |
-| push to `main` | 本番 (`hello-api`) | **要承認** | RBAC + environment protection rule |
-| PR | テストのみ | N/A | デプロイなし |
+| PR to `main` | テストのみ | N/A | デプロイなし |
 
-### 環境保護ルール
-
-GitHub の Environment protection を設定（本番のみ）:
-
-```
-Settings → Environments → production
-  ├─ Required reviewers: 2+ 
-  ├─ Deployment branches: main only
-  └─ Secrets: ACR_NAME, RESOURCE_GROUP, etc.
-```
-
-## セキュリティ / 認証
+### セキュリティ / 認証
 
 詳細は **Phase 0** の「GitHub Secrets & OIDC セットアップ」を参照してください。
 
