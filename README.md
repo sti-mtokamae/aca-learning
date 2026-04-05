@@ -15,6 +15,10 @@
 - 既存環境（`hello-api` / `apisix-gateway`）の運用コマンドは安定化済み
 - VNet PoC ネットワーク作成（VNet/Subnet/NSG）を `make vnet-poc` で再実行可能化
 - VNet 統合 ACA Environment への `hello-api-vnet` / `apisix-gateway-vnet` デプロイと smoke/routes 確認まで完了
+- **✅ CI/CD パイプライン（Guix + GitHub Actions）稼働中**
+  - develop branch push → hello-api-vnet 自動デプロイ
+  - main branch push → hello-api 本番デプロイ（要承認）
+  - 詳細: [docs/ci-cd-pipeline.md](docs/ci-cd-pipeline.md)
 
 ## 🛠 日次運用コマンド
 
