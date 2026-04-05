@@ -45,7 +45,12 @@ set +a
 ```bash
 cd /home/mtok/dev.home/aca-learning/spring-hello
 
-# 既定 .env を読み込みつつ、VNet 側の app/env 名だけ切り替える
+# 既定 .env を読み込む（RESOURCE_GROUP などを利用）
+set -a
+source ../.env
+set +a
+
+# VNet 側の app/env 名だけ切り替えてデプロイ
 ENV_FILE=../.env \
 ACA_ENV_NAME=aca-test-env-vnet \
 APP_NAME=hello-api-vnet \
@@ -53,8 +58,8 @@ APP_NAME=hello-api-vnet \
 
 # VNet 側では internal ingress に揃える
 az containerapp ingress enable \
-  --resource-group aca-test-env \
-  --name hello-api-vnet \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$APP_NAME" \
   --type internal \
   --target-port 8080
 ```
@@ -73,7 +78,7 @@ APP_SECURITY_PASSWORD="$APP_SECURITY_PASSWORD" \
 ```
 
 補足:
-- `hello-api-vnet` のように internal ingress の場合は、外部端末から直接 `verify-jwt-aca.sh` は実行しない。
+- internal ingress のアプリは、外部端末から直接 `verify-jwt-aca.sh` を実行しない。
 - VNet PoC では APISIX 経由の確認を正とし、詳細は `../docs/verification.md` を参照する。
 
 ## API エンドポイント
