@@ -472,12 +472,115 @@ az role assignment list \
 # 高速化のため guix packages を .tar.gz でキャッシュする検討も可能
 ```
 
+### Java バージョン不一致エラー
+
+**症状:**
+```
+ERROR: OpenJDK Runtime Environment (build 25.0.2...)
+```
+
+**原因:**
+- guix manifest で `openjdk@21` や `openjdk@17` を指定したが、runner 環境では異なるバージョン利用
+- Dockerfile で固定バージョン（e.g., `FROM eclipse-temurin:17-jre-jammy`）を指定しており guix と不一致
+
+**対策:**
+```scheme
+;; guix-manifest.scm - バージョン指定なし
+(specifications->manifest
+  '(
+    "openjdk"    ; ← バージョンを指定しない
+    "maven"
+    "docker"
+  ))
+```
+
+```dockerfile
+# spring-hello/Dockerfile
+FROM eclipse-temurin:latest    # ← :latest を使用
+```
+
+**理由:**
+- 異なる環境間での互換性が高い
+- 細粒度のバージョン固定が必要な場合は pom.xml で指定するだけで十分
+
+### Azure CLI コマンドフラグエラー
+
+**症状:**
+```
+ERROR: unrecognized arguments: -q
+```
+
+**原因:**
+- GitHub Actions の Azure CLI では一部フラグが未サポート
+- 特に `-q`（quiet）オプションは runner で使用できないことがある
+
+**対策:**
+```bash
+# ❌ これは失敗
+az acr login --name "$ACR_NAME" -q
+az containerapp update --resource-group "$RG" --name "$APP" --image "$IMG" -q
+
+# ✅ これは動作
+az acr login --name "$ACR_NAME"
+az containerapp update --resource-group "$RG" --name "$APP" --image "$IMG"
+```
+
+### RBAC 認可エラー（Container App 更新失敗）
+
+**症状:**
+```
+ERROR: (AuthorizationFailed) The client '...' does not have authorization to perform action 
+'Microsoft.App/containerApps/read' over scope '...'
+```
+
+**原因:**
+- Managed Identity は作成済み
+- Federated Credential は設定済み
+- **RBAC ロール割り当てが漏れている** ← 最大の原因
+
+**対策（必須）:**
+
+```bash
+# Managed Identity の PrincipalId を取得
+PRINCIPAL_ID=$(az identity show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name github-ci-identity \
+  --query principalId -o tsv)
+
+# Contributor ロールをリソースグループへ割り当て
+az role assignment create \
+  --role "Contributor" \
+  --assignee-object-id "$PRINCIPAL_ID" \
+  --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$RESOURCE_GROUP"
+```
+
+**重要:**
+- この RBAC セットアップは **初回セットアップ時に一度だけ実行**
+- workflow には含めない（Azure リソース層の設定）
+
+### Java Module System エラー（cglib compatibility）
+
+**症状:**
+```
+ERROR: ... error: cannot find symbol: class EnhancedConfigurationComparator ...
+```
+
+**原因:**
+- Spring Boot + cglib + Java 9+ の module system 互換性問題
+
+**対策:**
+```bash
+# scripts/ci-pipeline.sh 内で設定
+export MAVEN_OPTS="--add-opens java.base/java.lang=ALL-UNNAMED"
+mvn clean package -DskipTests
+```
+
 ### Docker build が失敗
 
 ```bash
 # guix shell 内では stdin が限定されるため、
 # Dockerfile が stdin から入力を期待していると失敗することがある
-# 対策：Dockerfile 内の RUN コマンドで明示的に入力を指定
+# 対策：Dockerfile 内の RUN コマンドで non-interactive にする
 ```
 
 ### ACR login エラー
