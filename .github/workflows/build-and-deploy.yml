@@ -1,0 +1,95 @@
+name: Build and Deploy to ACA
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Guix
+        run: |
+          # Install Guix on Ubuntu
+          sudo apt-get update
+          sudo apt-get install -y guix
+          
+          # Wait for guix-daemon to start
+          sleep 2
+      
+      - name: Azure login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Prepare environment
+        run: |
+          # Build .env from secrets
+          cat > .env << 'EOF'
+          RESOURCE_GROUP=${{ secrets.RESOURCE_GROUP }}
+          ACR_NAME=${{ secrets.ACR_NAME }}
+          APP_SECURITY_USERNAME=${{ secrets.APP_SECURITY_USERNAME }}
+          APP_SECURITY_PASSWORD=${{ secrets.APP_SECURITY_PASSWORD }}
+          APP_JWT_SECRET=${{ secrets.APP_JWT_SECRET }}
+          APISIX_ADMIN_KEY=${{ secrets.APISIX_ADMIN_KEY }}
+          ACA_ENV_NAME=${{ secrets.ACA_ENV_NAME }}
+          EOF
+          
+          # Verify .env is not empty
+          if [ ! -s .env ]; then
+            echo "ERROR: .env is empty or not created"
+            exit 1
+          fi
+          
+          echo "✓ .env prepared"
+      
+      - name: Determine target environment
+        id: env-check
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "TARGET_ENV=prod" >> $GITHUB_OUTPUT
+            echo "🔴 Production deployment"
+          else
+            echo "TARGET_ENV=dev" >> $GITHUB_OUTPUT
+            echo "🟢 Development deployment"
+          fi
+      
+      - name: Build, push, and deploy
+        run: |
+          # Execute pipeline with guix + script
+          guix shell -m guix-manifest.scm -- \
+            ./scripts/ci-pipeline.sh \
+            "${{ steps.env-check.outputs.TARGET_ENV }}" \
+            "${{ github.run_number }}"
+      
+      - name: Post-deployment verification
+        if: success()
+        run: |
+          echo "✅ Pipeline completed successfully"
+          echo ""
+          echo "Deployment summary:"
+          echo "  - Branch: ${{ github.ref }}"
+          echo "  - Commit: ${{ github.sha }}"
+          echo "  - Run: ${{ github.run_number }}"
