@@ -7,8 +7,8 @@
 
 (specifications->manifest
   '(
-    ;; Java (21 = latest LTS)
-    "openjdk@21"
+    ;; Java (latest available)
+    "openjdk"
 
     ;; Build tools
     "maven@3.8"
